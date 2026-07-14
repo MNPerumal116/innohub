@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <!-- Circular refresh/cycle arrow -->
+  <path
+    d="M85 35 A36 36 0 1 0 95 60"
+    stroke="white"
+    stroke-width="7"
+    stroke-linecap="round"
+    fill="none"
+  />
+  <!-- Arrowhead at the end of the arc (pointing right-downward) -->
+  <polyline
+    points="83,22 95,35 108,28"
+    stroke="white"
+    stroke-width="7"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+  />
+  <!-- "ib" text rendered as paths -->
+  <!-- i dot -->
+  <circle cx="34" cy="43" r="5" fill="white"/>
+  <!-- i stem -->
+  <rect x="30" y="53" width="8" height="28" rx="4" fill="white"/>
+  <!-- b left stem -->
+  <rect x="46" y="38" width="8" height="43" rx="4" fill="white"/>
+  <!-- b bowl -->
+  <path
+    d="M54 60 Q78 56 78 68 Q78 82 54 81"
+    stroke="white"
+    stroke-width="8"
+    stroke-linecap="round"
+    fill="none"
+  />
+</svg>

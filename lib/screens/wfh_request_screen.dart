@@ -189,6 +189,7 @@ class _WfhRequestScreenState extends State<WfhRequestScreen> {
             controller: _noteController,
             maxLines: 5,
             style: const TextStyle(fontSize: 14, color: Color(0xFF1E293B)),
+            onChanged: (_) => setState(() {}), // rebuild to update button state
             decoration: const InputDecoration(
               hintText: 'Reason for WFH',
               hintStyle: TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
@@ -317,6 +318,7 @@ class _WfhRequestScreenState extends State<WfhRequestScreen> {
 
   Widget _buildSubmitButton() {
     final bool canSubmit = _hasDateRange && _noteController.text.trim().isNotEmpty;
+
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
       decoration: const BoxDecoration(
@@ -326,15 +328,19 @@ class _WfhRequestScreenState extends State<WfhRequestScreen> {
       child: SizedBox(
         width: double.infinity,
         child: ElevatedButton(
-          onPressed: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('WFH request submitted!')),
-            );
-            Navigator.pop(context);
-          },
+          onPressed: canSubmit
+              ? () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('WFH request submitted!')),
+                  );
+                  Navigator.pop(context);
+                }
+              : null,
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF93C5FD),
+            backgroundColor: _primary,
+            disabledBackgroundColor: const Color(0xFFCBD5E1),
             foregroundColor: Colors.white,
+            disabledForegroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 16),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             elevation: 0,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../screens/auth/splash_screen.dart';
+import '../screens/auth/login_screen.dart';
 import '../layout/responsive_layout.dart';
 import '../screens/attendance_history_screen.dart';
 import '../screens/leave_screen.dart';
@@ -13,6 +14,7 @@ import '../screens/settings_screen.dart';
 
 class AppRoutes {
   static const String splash = '/splash';
+  static const String login  = '/login';
 
   // Main shell (bottom nav tabs: Home, Attendance, Team, Profile)
   static const String homeShell = '/home';
@@ -38,6 +40,7 @@ class AppRoutes {
   static Map<String, WidgetBuilder> getRoutes() {
     return {
       splash: (context) => const SplashScreen(),
+      login:  (context) => const LoginScreen(),
 
       homeShell: (context) => const ResponsiveLayout(),
 

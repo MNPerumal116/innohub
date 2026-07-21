@@ -29,9 +29,9 @@ class _SplashScreenState extends State<SplashScreen>
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
     _controller.forward();
 
-    Future.delayed(const Duration(seconds: 2), () {
+    Future.delayed(const Duration(seconds: 3), () {
       if (mounted) {
-        Navigator.pushReplacementNamed(context, AppRoutes.homeShell);
+        Navigator.pushReplacementNamed(context, AppRoutes.login);
       }
     });
   }
@@ -62,24 +62,14 @@ class _SplashScreenState extends State<SplashScreen>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   // SVG Logo
-                  SvgPicture.asset(
-                    'assets/images/innohub_logo.svg',
-                    width: 80,
-                    height: 80,
-                    colorFilter: const ColorFilter.mode(
-                      Colors.white,
-                      BlendMode.srcIn,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  const Text(
-                    'InnoHub HR',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.2,
-                    ),
+                  Image.asset(
+                    'assets/images/png_logo.png',
+                    width: 150,
+                    height: 150,
+                    // colorFilter: const ColorFilter.mode(
+                    //   Colors.white,
+                    //   BlendMode.srcIn,
+                    // ),
                   ),
                 ],
               ),

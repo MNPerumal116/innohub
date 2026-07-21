@@ -14,11 +14,11 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
   String? _selectedLeaveType;
   final TextEditingController _noteController = TextEditingController();
   final List<String> _leaveTypes = [
-    'Sick Leave',
-    'Casual Leave',
-    'Earned Leave',
-    'Maternity Leave',
-    'Paternity Leave',
+    'Sick Leave (2)',
+    'Casual Leave (4)',
+    'Earned Leave (2)',
+    'Maternity Leave (10)',
+    'Paternity Leave (5)',
   ];
   final List<String> _teammates = [];
 
@@ -29,14 +29,28 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
     int count = 0;
     DateTime d = _startDate;
     while (!d.isAfter(_endDate)) {
-      if (d.weekday != DateTime.saturday && d.weekday != DateTime.sunday) count++;
+      if (d.weekday != DateTime.saturday && d.weekday != DateTime.sunday)
+        count++;
       d = d.add(const Duration(days: 1));
     }
     return count;
   }
 
   String _formatDate(DateTime dt) {
-    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     return '${dt.day.toString().padLeft(2, '0')} ${months[dt.month - 1]} ${dt.year}';
   }
 
@@ -153,10 +167,7 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
                 ),
               ),
             ),
-            Container(
-              width: 1,
-              color: const Color(0xFFE2E8F0),
-            ),
+            Container(width: 1, color: const Color(0xFFE2E8F0)),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Column(
@@ -173,10 +184,7 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
                 ],
               ),
             ),
-            Container(
-              width: 1,
-              color: const Color(0xFFE2E8F0),
-            ),
+            Container(width: 1, color: const Color(0xFFE2E8F0)),
             Expanded(
               child: GestureDetector(
                 onTap: () => _pickDate(false),
@@ -253,13 +261,23 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
               isExpanded: true,
               icon: const Padding(
                 padding: EdgeInsets.only(right: 14),
-                child: Icon(Icons.keyboard_arrow_down, color: Color(0xFF64748B)),
+                child: Icon(
+                  Icons.keyboard_arrow_down,
+                  color: Color(0xFF64748B),
+                ),
               ),
               borderRadius: BorderRadius.circular(10),
-              items: _leaveTypes.map((t) => DropdownMenuItem(value: t, child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                child: Text(t),
-              ))).toList(),
+              items: _leaveTypes
+                  .map(
+                    (t) => DropdownMenuItem(
+                      value: t,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        child: Text(t),
+                      ),
+                    ),
+                  )
+                  .toList(),
               onChanged: (val) => setState(() => _selectedLeaveType = val),
             ),
           ),
@@ -300,6 +318,7 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
             controller: _noteController,
             maxLines: 4,
             style: const TextStyle(fontSize: 14, color: Color(0xFF1E293B)),
+            onChanged: (_) => setState(() {}), // rebuild to update button state
             decoration: const InputDecoration(
               hintText: 'Ex: Need to attend a family function.',
               hintStyle: TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
@@ -332,19 +351,22 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
         const SizedBox(height: 16),
         Row(
           children: [
-            // Existing teammate chips
-            ..._teammates.map((name) => Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: CircleAvatar(
-                radius: 22,
-                backgroundColor: const Color(0xFFEFF6FF),
-                child: Text(
-                  name.isNotEmpty ? name[0].toUpperCase() : '?',
-                  style: const TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.bold),
+            ..._teammates.map(
+              (name) => Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: CircleAvatar(
+                  radius: 22,
+                  backgroundColor: const Color(0xFFEFF6FF),
+                  child: Text(
+                    name.isNotEmpty ? name[0].toUpperCase() : '?',
+                    style: const TextStyle(
+                      color: Color(0xFF2563EB),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
-            )),
-            // Add button
+            ),
             GestureDetector(
               onTap: () {},
               child: Column(
@@ -354,9 +376,16 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
                     height: 44,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      border: Border.all(color: const Color(0xFFCBD5E1), width: 1.5),
+                      border: Border.all(
+                        color: const Color(0xFFCBD5E1),
+                        width: 1.5,
+                      ),
                     ),
-                    child: const Icon(Icons.add, color: Color(0xFF2563EB), size: 22),
+                    child: const Icon(
+                      Icons.add,
+                      color: Color(0xFF2563EB),
+                      size: 22,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   const Text(
@@ -373,6 +402,11 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
   }
 
   Widget _buildBottomBar(int days) {
+    final bool canSubmit =
+        days > 0 &&
+        _selectedLeaveType != null &&
+        _noteController.text.trim().isNotEmpty;
+
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       decoration: const BoxDecoration(
@@ -394,15 +428,19 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: days > 0 && _selectedLeaveType != null ? () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Leave request submitted!')),
-                );
-                Navigator.pop(context);
-              } : null,
+              onPressed: canSubmit
+                  ? () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Leave request submitted!'),
+                        ),
+                      );
+                      Navigator.pop(context);
+                    }
+                  : null,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF93C5FD),
-                disabledBackgroundColor: const Color(0xFF93C5FD),
+                backgroundColor: _primary,
+                disabledBackgroundColor: const Color(0xFFCBD5E1),
                 foregroundColor: Colors.white,
                 disabledForegroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),

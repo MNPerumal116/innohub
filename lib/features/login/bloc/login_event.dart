@@ -12,11 +12,16 @@ abstract class LoginEvent extends Equatable {
 class LoginSubmitted extends LoginEvent {
   final String email;
   final String password;
+  final bool rememberMe;
 
-  const LoginSubmitted({required this.email, required this.password});
+  const LoginSubmitted({
+    required this.email,
+    required this.password,
+    this.rememberMe = false,
+  });
 
   @override
-  List<Object?> get props => [email, password];
+  List<Object?> get props => [email, password, rememberMe];
 }
 
 /// Triggered to explicitly refresh the token (e.g., from a background check).

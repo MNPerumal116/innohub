@@ -39,6 +39,15 @@ dependencies:
   equatable: ^2.0.7
   http: ^1.2.2
   shared_preferences: ^2.3.3
+  intl: any
+  geolocator: ^13.0.4
+  geocoding: ^4.0.0
+  permission_handler: ^11.4.0
+  flutter_map: ^6.1.0
+  latlong2: ^0.9.0
+  camera: ^0.10.5
+  path_provider: ^2.1.5
+  path: ^1.9.1
 
 dev_dependencies:
   flutter_test:

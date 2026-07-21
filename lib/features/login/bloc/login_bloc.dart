@@ -28,7 +28,7 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
         email: event.email,
         password: event.password,
       );
-      final response = await _repo.login(request);
+      final response = await _repo.login(request, rememberMe: event.rememberMe);
       emit(LoginSuccess(response));
     } on ApiException catch (e) {
       emit(LoginFailure(e.message));

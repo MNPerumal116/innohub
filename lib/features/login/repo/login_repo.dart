@@ -21,7 +21,7 @@ class LoginRepo {
 
   /// Authenticates the user and stores all tokens.
   /// Throws [ApiException] on failure.
-  Future<LoginResponse> login(LoginRequest request) async {
+  Future<LoginResponse> login(LoginRequest request, {bool rememberMe = false}) async {
     final json = await _apiClient.post(
       ApiConstants.login,
       request.toJson(),
@@ -37,6 +37,7 @@ class LoginRepo {
       sessionId:    response.sessionId,
       username:     response.username,
       role:         response.role,
+      rememberMe:   rememberMe,
     );
 
     return response;
@@ -75,6 +76,7 @@ class LoginRepo {
       sessionId:    response.sessionId,
       username:     response.username,
       role:         response.role,
+      rememberMe:   true, // Refreshing keeps session alive for next 30 days
     );
 
     return response;

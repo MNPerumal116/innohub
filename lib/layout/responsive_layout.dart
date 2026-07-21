@@ -3,6 +3,7 @@ import '../screens/home_screen.dart';
 import '../screens/attendance_screen.dart';
 import '../screens/team_screen.dart';
 import '../screens/profile_screen.dart';
+import '../widgets/app_drawer.dart';
 
 class ResponsiveLayout extends StatefulWidget {
   const ResponsiveLayout({super.key});
@@ -74,6 +75,7 @@ class _ResponsiveLayoutState extends State<ResponsiveLayout> {
         if (constraints.maxWidth < 600) {
           // Mobile Layout
           return Scaffold(
+            drawer: const AppDrawer(),
             body: _screens[_selectedIndex],
             bottomNavigationBar: NavigationBar(
               selectedIndex: _selectedIndex,

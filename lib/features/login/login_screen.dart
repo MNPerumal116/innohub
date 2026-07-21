@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../routes/app_routes.dart';
-import '../../features/login/bloc/login_bloc.dart';
-import '../../features/login/bloc/login_event.dart';
-import '../../features/login/bloc/login_state.dart';
+import 'bloc/login_bloc.dart';
+import 'bloc/login_event.dart';
+import 'bloc/login_state.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -80,7 +80,11 @@ class _LoginScreenViewState extends State<_LoginScreenView>
     if (!_formKey.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
     context.read<LoginBloc>().add(
-      LoginSubmitted(email: _emailCtrl.text.trim(), password: _passCtrl.text),
+      LoginSubmitted(
+        email: _emailCtrl.text.trim(), 
+        password: _passCtrl.text,
+        rememberMe: _rememberMe,
+      ),
     );
   }
 
@@ -99,15 +103,19 @@ class _LoginScreenViewState extends State<_LoginScreenView>
               SnackBar(
                 content: Row(
                   children: [
-                    const Icon(Icons.check_circle_outline,
-                        color: Colors.white, size: 20),
+                    const Icon(
+                      Icons.check_circle_outline,
+                      color: Colors.white,
+                      size: 20,
+                    ),
                     const SizedBox(width: 10),
                     Text(
                       'Welcome, ${state.response.username}!',
                       style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14),
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
                     ),
                   ],
                 ),
@@ -115,7 +123,8 @@ class _LoginScreenViewState extends State<_LoginScreenView>
                 behavior: SnackBarBehavior.floating,
                 margin: const EdgeInsets.all(16),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
+                  borderRadius: BorderRadius.circular(10),
+                ),
                 duration: const Duration(milliseconds: 1500),
               ),
             );
@@ -129,16 +138,20 @@ class _LoginScreenViewState extends State<_LoginScreenView>
               SnackBar(
                 content: Row(
                   children: [
-                    const Icon(Icons.error_outline,
-                        color: Colors.white, size: 20),
+                    const Icon(
+                      Icons.error_outline,
+                      color: Colors.white,
+                      size: 20,
+                    ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         state.error,
                         style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w500,
-                            fontSize: 14),
+                          color: Colors.white,
+                          fontWeight: FontWeight.w500,
+                          fontSize: 14,
+                        ),
                       ),
                     ),
                   ],
@@ -147,7 +160,8 @@ class _LoginScreenViewState extends State<_LoginScreenView>
                 behavior: SnackBarBehavior.floating,
                 margin: const EdgeInsets.all(16),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
+                  borderRadius: BorderRadius.circular(10),
+                ),
                 duration: const Duration(seconds: 3),
               ),
             );

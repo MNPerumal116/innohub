@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../routes/app_routes.dart';
+import '../../core/storage/token_storage.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -29,9 +30,14 @@ class _SplashScreenState extends State<SplashScreen>
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
     _controller.forward();
 
-    Future.delayed(const Duration(seconds: 3), () {
+    Future.delayed(const Duration(seconds: 3), () async {
+      final isLoggedIn = await TokenStorage.instance.isLoggedIn();
       if (mounted) {
-        Navigator.pushReplacementNamed(context, AppRoutes.login);
+        if (isLoggedIn) {
+          Navigator.pushReplacementNamed(context, AppRoutes.homeShell);
+        } else {
+          Navigator.pushReplacementNamed(context, AppRoutes.login);
+        }
       }
     });
   }

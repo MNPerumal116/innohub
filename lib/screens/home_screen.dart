@@ -11,33 +11,70 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   bool _isClockedIn = false;
+  bool _isOnBreak = false;
   Duration _elapsed = Duration.zero;
+  Duration _totalBreakDuration = Duration.zero;
   Timer? _timer;
   DateTime? _clockInTime;
+  DateTime? _breakStartTime;
 
   static const Color _primary = Color(0xFF2563EB);
   static const Color _bg = Color(0xFFF3F5F9);
 
-  void _toggleClock() {
-    if (_isClockedIn) {
-      _timer?.cancel();
+  Future<void> _handleClockIn() async {
+    final result = await Navigator.pushNamed(context, AppRoutes.selfieVerification);
+    if (result == true) {
       setState(() {
-        _isClockedIn = false;
+        _isClockedIn = true;
+        _isOnBreak = false;
+        _clockInTime = DateTime.now();
         _elapsed = Duration.zero;
-        _clockInTime = null;
+        _totalBreakDuration = Duration.zero;
+        _breakStartTime = null;
       });
-    } else {
-      _clockInTime = DateTime.now();
       _timer = Timer.periodic(const Duration(seconds: 1), (_) {
         setState(() {
           _elapsed = DateTime.now().difference(_clockInTime!);
         });
       });
-      setState(() {
-        _isClockedIn = true;
-      });
     }
   }
+
+  void _handleClockOut() {
+    _timer?.cancel();
+    setState(() {
+      _isClockedIn = false;
+      _isOnBreak = false;
+      _elapsed = Duration.zero;
+      _totalBreakDuration = Duration.zero;
+      _clockInTime = null;
+      _breakStartTime = null;
+    });
+  }
+
+  void _toggleBreak() {
+    setState(() {
+      if (_isOnBreak) {
+        // Ending break (Break In)
+        _isOnBreak = false;
+        if (_breakStartTime != null) {
+          _totalBreakDuration += DateTime.now().difference(_breakStartTime!);
+          _breakStartTime = null;
+        }
+      } else {
+        // Starting break (Break Out)
+        _isOnBreak = true;
+        _breakStartTime = DateTime.now();
+      }
+    });
+  }
+
+  Duration get _currentBreakDuration => _isOnBreak && _breakStartTime != null
+      ? DateTime.now().difference(_breakStartTime!)
+      : Duration.zero;
+
+  Duration get _totalBreak => _totalBreakDuration + _currentBreakDuration;
+  Duration get _effectiveHours => _elapsed - _totalBreak;
 
   String _formatElapsed(Duration d) {
     final h = d.inHours.toString().padLeft(2, '0');
@@ -65,7 +102,7 @@ class _HomeScreenState extends State<HomeScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            _buildTopBar(),
+            _buildTopBar(context),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
@@ -101,12 +138,19 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildTopBar() {
+  Widget _buildTopBar(BuildContext context) {
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
         children: [
+          IconButton(
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            icon: const Icon(Icons.menu, color: Colors.black87),
+            onPressed: () => Scaffold.of(context).openDrawer(),
+          ),
+          const SizedBox(width: 12),
           CircleAvatar(
             radius: 18,
             backgroundColor: const Color(0xFFFCA5A5),
@@ -280,7 +324,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     const Spacer(),
                     Text(
                       _isClockedIn
-                          ? '${_elapsed.inHours}h ${_elapsed.inMinutes.remainder(60)}m / 8h 25m'
+                          ? '${_effectiveHours.inHours}h ${_effectiveHours.inMinutes.remainder(60)}m / 8h 25m'
                           : '0h / 8h 25m',
                       style: const TextStyle(
                         fontSize: 13,
@@ -294,7 +338,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: _toggleClock,
+                      onPressed: _handleClockIn,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF2563EB),
                         foregroundColor: Colors.white,
@@ -311,79 +355,69 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   )
                 else
-                  Row(
+                  Column(
                     children: [
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: _toggleClock,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFEF4444),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            elevation: 0,
-                          ),
-                          child: const Text(
-                            'Clock Out',
-                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                         decoration: BoxDecoration(
                           color: const Color(0xFFF8FAFC),
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(color: const Color(0xFFE2E8F0)),
                         ),
-                        child: Column(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
-                            Text(
-                              _formatElapsed(_elapsed),
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF1E293B),
-                              ),
-                            ),
-                            Row(
-                              children: [
-                                Container(
-                                  width: 7,
-                                  height: 7,
-                                  decoration: const BoxDecoration(
-                                    color: Color(0xFF22C55E),
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  _clockInTime != null
-                                      ? '${_clockInTime!.hour.toString().padLeft(2, '0')}:${_clockInTime!.minute.toString().padLeft(2, '0')}'
-                                      : '--:--',
-                                  style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-                                ),
-                              ],
-                            ),
+                            _buildSplitStat('Gross', _formatElapsed(_elapsed)),
+                            Container(width: 1, height: 30, color: const Color(0xFFCBD5E1)),
+                            _buildSplitStat('Break', _formatElapsed(_totalBreak), isWarning: _isOnBreak),
+                            Container(width: 1, height: 30, color: const Color(0xFFCBD5E1)),
+                            _buildSplitStat('Effective', _formatElapsed(_effectiveHours), isPrimary: true),
                           ],
                         ),
                       ),
-                      const SizedBox(width: 10),
-                      OutlinedButton.icon(
-                        onPressed: () {},
-                        icon: const Icon(Icons.location_on_outlined, size: 16),
-                        label: const Text('Punch', style: TextStyle(fontSize: 14)),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFF2563EB),
-                          side: const BorderSide(color: Color(0xFF2563EB)),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: _isOnBreak ? null : _handleClockOut,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFEF4444),
+                                disabledBackgroundColor: const Color(0xFFEF4444).withOpacity(0.5),
+                                foregroundColor: Colors.white,
+                                disabledForegroundColor: Colors.white.withOpacity(0.7),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                elevation: 0,
+                              ),
+                              child: const Text(
+                                'Clock Out',
+                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                              ),
+                            ),
                           ),
-                        ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: _toggleBreak,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _isOnBreak ? const Color(0xFFEAB308) : const Color(0xFF3B82F6),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                elevation: 0,
+                              ),
+                              child: Text(
+                                _isOnBreak ? 'Break In' : 'Break Out',
+                                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -395,12 +429,38 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildSplitStat(String label, String value, {bool isPrimary = false, bool isWarning = false}) {
+    Color valColor = const Color(0xFF1E293B);
+    if (isPrimary) valColor = const Color(0xFF2563EB);
+    if (isWarning) valColor = const Color(0xFFEAB308);
+
+    return Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: valColor,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            color: Color(0xFF64748B),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildOffThisWeekCard() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-      ),
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(14),
+      clipBehavior: Clip.antiAlias,
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         leading: Container(
@@ -453,11 +513,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildUpcomingHolidaysCard() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-      ),
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(14),
+      clipBehavior: Clip.antiAlias,
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         leading: Container(

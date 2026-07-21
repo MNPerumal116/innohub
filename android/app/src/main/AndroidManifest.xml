@@ -1,4 +1,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Camera permission -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <!-- Location permissions -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <!-- Internet for Maps/Geocoding -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+
     <application
         android:label="InnoHUB"
         android:name="${applicationName}"
@@ -30,6 +39,10 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- Google Maps API Key — replace YOUR_MAPS_API_KEY with your actual key -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="YOUR_MAPS_API_KEY"/>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
@@ -43,3 +56,4 @@
         </intent>
     </queries>
 </manifest>
+

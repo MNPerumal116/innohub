@@ -13,6 +13,7 @@ class TokenStorage {
   static const _keySessionId    = 'session_id';
   static const _keyUsername     = 'username';
   static const _keyRole         = 'role';
+  static const _keyExpiryDate   = 'expiry_date';
 
   Future<SharedPreferences> get _prefs => SharedPreferences.getInstance();
 
@@ -25,12 +26,16 @@ class TokenStorage {
     required String sessionId,
     String? username,
     String? role,
+    bool rememberMe = false,
   }) async {
     final prefs = await _prefs;
+    final expiry = DateTime.now().add(Duration(days: rememberMe ? 30 : 1));
+
     await Future.wait([
       prefs.setString(_keyAuthToken,    authToken),
       prefs.setString(_keyRefreshToken, refreshToken),
       prefs.setString(_keySessionId,    sessionId),
+      prefs.setString(_keyExpiryDate,   expiry.toIso8601String()),
       if (username != null) prefs.setString(_keyUsername, username),
       if (role     != null) prefs.setString(_keyRole,     role),
     ]);
@@ -43,6 +48,7 @@ class TokenStorage {
       prefs.remove(_keyAuthToken),
       prefs.remove(_keyRefreshToken),
       prefs.remove(_keySessionId),
+      prefs.remove(_keyExpiryDate),
       prefs.remove(_keyUsername),
       prefs.remove(_keyRole),
     ]);
@@ -56,9 +62,22 @@ class TokenStorage {
   Future<String?> getUsername()     async => (await _prefs).getString(_keyUsername);
   Future<String?> getRole()         async => (await _prefs).getString(_keyRole);
 
-  /// Returns true if an auth token is stored (user is considered logged in).
+  /// Returns true if an auth token is stored and has not expired.
   Future<bool> isLoggedIn() async {
-    final token = await getAuthToken();
-    return token != null && token.isNotEmpty;
+    final prefs = await _prefs;
+    final token = prefs.getString(_keyAuthToken);
+    if (token == null || token.isEmpty) return false;
+
+    final expiryStr = prefs.getString(_keyExpiryDate);
+    if (expiryStr != null) {
+      try {
+        final expiry = DateTime.parse(expiryStr);
+        if (DateTime.now().isAfter(expiry)) {
+          await clearAll();
+          return false;
+        }
+      } catch (_) {}
+    }
+    return true;
   }
 }

@@ -22,7 +22,10 @@ class _HomeScreenState extends State<HomeScreen> {
   static const Color _bg = Color(0xFFF3F5F9);
 
   Future<void> _handleClockIn() async {
-    final result = await Navigator.pushNamed(context, AppRoutes.selfieVerification);
+    final result = await Navigator.pushNamed(
+      context,
+      AppRoutes.selfieVerification,
+    );
     if (result == true) {
       setState(() {
         _isClockedIn = true;
@@ -93,9 +96,23 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final now = DateTime.now();
     final dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    final monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final monthNames = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     final dayOfWeek = dayNames[now.weekday - 1];
-    final dayStr = '${now.day.toString().padLeft(2, '0')} ${monthNames[now.month - 1]}';
+    final dayStr =
+        '${now.day.toString().padLeft(2, '0')} ${monthNames[now.month - 1]}';
 
     return Scaffold(
       backgroundColor: _bg,
@@ -176,10 +193,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   SizedBox(width: 14),
                   Text(
                     'Search your colleagues',
-                    style: TextStyle(
-                      color: Color(0xFF94A3B8),
-                      fontSize: 13,
-                    ),
+                    style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
                   ),
                 ],
               ),
@@ -194,18 +208,30 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildQuickActions(BuildContext context) {
     final actions = [
-      _QuickAction(icon: Icons.flight_takeoff_outlined, label: 'Apply\nLeave', onTap: () {
-        Navigator.pushNamed(context, AppRoutes.applyLeave);
-      }),
-      _QuickAction(icon: Icons.home_work_outlined, label: 'Apply\nWFH', onTap: () {
-        Navigator.pushNamed(context, AppRoutes.wfhRequest);
-      }),
-      _QuickAction(icon: Icons.receipt_long_outlined, label: 'View\nPayslip', onTap: () {
-        Navigator.pushNamed(context, AppRoutes.payslips);
-      }),
-      _QuickAction(icon: Icons.assignment_outlined, label: 'Leave\nBalance', onTap: () {
-        Navigator.pushNamed(context, AppRoutes.leave);
-      }),
+      _QuickAction(
+        icon: Icons.flight_takeoff_outlined,
+        label: 'Apply\nLeave',
+        onTap: () {
+          Navigator.pushNamed(context, AppRoutes.applyLeave);
+        },
+      ),
+      _QuickAction(
+        icon: Icons.home_work_outlined,
+        label: 'Apply\nWFH',
+        onTap: () {
+          Navigator.pushNamed(context, AppRoutes.wfhRequest);
+        },
+      ),
+      // _QuickAction(icon: Icons.receipt_long_outlined, label: 'View\nPayslip', onTap: () {
+      //   Navigator.pushNamed(context, AppRoutes.payslips);
+      // }),
+      _QuickAction(
+        icon: Icons.assignment_outlined,
+        label: 'Leave\nBalance',
+        onTap: () {
+          Navigator.pushNamed(context, AppRoutes.leave);
+        },
+      ),
     ];
 
     return Container(
@@ -295,10 +321,16 @@ class _HomeScreenState extends State<HomeScreen> {
                       width: 44,
                       height: 44,
                       decoration: BoxDecoration(
-                        color: _isClockedIn ? const Color(0xFFEF4444) : const Color(0xFF22C55E),
+                        color: _isClockedIn
+                            ? const Color(0xFFEF4444)
+                            : const Color(0xFF22C55E),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: const Icon(Icons.open_in_new, color: Colors.white, size: 20),
+                      child: const Icon(
+                        Icons.open_in_new,
+                        color: Colors.white,
+                        size: 20,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Column(
@@ -350,7 +382,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       child: const Text(
                         'Clock In',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   )
@@ -358,7 +393,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   Column(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 12,
+                          horizontal: 16,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFFF8FAFC),
                           borderRadius: BorderRadius.circular(10),
@@ -368,10 +406,26 @@ class _HomeScreenState extends State<HomeScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
                             _buildSplitStat('Gross', _formatElapsed(_elapsed)),
-                            Container(width: 1, height: 30, color: const Color(0xFFCBD5E1)),
-                            _buildSplitStat('Break', _formatElapsed(_totalBreak), isWarning: _isOnBreak),
-                            Container(width: 1, height: 30, color: const Color(0xFFCBD5E1)),
-                            _buildSplitStat('Effective', _formatElapsed(_effectiveHours), isPrimary: true),
+                            Container(
+                              width: 1,
+                              height: 30,
+                              color: const Color(0xFFCBD5E1),
+                            ),
+                            _buildSplitStat(
+                              'Break',
+                              _formatElapsed(_totalBreak),
+                              isWarning: _isOnBreak,
+                            ),
+                            Container(
+                              width: 1,
+                              height: 30,
+                              color: const Color(0xFFCBD5E1),
+                            ),
+                            _buildSplitStat(
+                              'Effective',
+                              _formatElapsed(_effectiveHours),
+                              isPrimary: true,
+                            ),
                           ],
                         ),
                       ),
@@ -383,10 +437,15 @@ class _HomeScreenState extends State<HomeScreen> {
                               onPressed: _isOnBreak ? null : _handleClockOut,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFFEF4444),
-                                disabledBackgroundColor: const Color(0xFFEF4444).withOpacity(0.5),
+                                disabledBackgroundColor: const Color(
+                                  0xFFEF4444,
+                                ).withOpacity(0.5),
                                 foregroundColor: Colors.white,
-                                disabledForegroundColor: Colors.white.withOpacity(0.7),
-                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                disabledForegroundColor: Colors.white
+                                    .withOpacity(0.7),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10),
                                 ),
@@ -394,7 +453,10 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                               child: const Text(
                                 'Clock Out',
-                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
                           ),
@@ -403,9 +465,13 @@ class _HomeScreenState extends State<HomeScreen> {
                             child: ElevatedButton(
                               onPressed: _toggleBreak,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: _isOnBreak ? const Color(0xFFEAB308) : const Color(0xFF3B82F6),
+                                backgroundColor: _isOnBreak
+                                    ? const Color(0xFFEAB308)
+                                    : const Color(0xFF3B82F6),
                                 foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10),
                                 ),
@@ -413,7 +479,10 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                               child: Text(
                                 _isOnBreak ? 'Break In' : 'Break Out',
-                                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
                           ),
@@ -429,7 +498,12 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildSplitStat(String label, String value, {bool isPrimary = false, bool isWarning = false}) {
+  Widget _buildSplitStat(
+    String label,
+    String value, {
+    bool isPrimary = false,
+    bool isWarning = false,
+  }) {
     Color valColor = const Color(0xFF1E293B);
     if (isPrimary) valColor = const Color(0xFF2563EB);
     if (isWarning) valColor = const Color(0xFFEAB308);
@@ -447,10 +521,7 @@ class _HomeScreenState extends State<HomeScreen> {
         const SizedBox(height: 4),
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: Color(0xFF64748B),
-          ),
+          style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
         ),
       ],
     );
@@ -470,11 +541,19 @@ class _HomeScreenState extends State<HomeScreen> {
             color: const Color(0xFFEFF6FF),
             shape: BoxShape.circle,
           ),
-          child: const Icon(Icons.nightlight_round, color: Color(0xFF2563EB), size: 20),
+          child: const Icon(
+            Icons.nightlight_round,
+            color: Color(0xFF2563EB),
+            size: 20,
+          ),
         ),
         title: const Text(
           'Off this week',
-          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: Color(0xFF1E293B)),
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+            color: Color(0xFF1E293B),
+          ),
         ),
         subtitle: const Text(
           'See which of your coworkers are off this week',
@@ -496,7 +575,11 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       child: Column(
         children: [
-          Icon(Icons.sentiment_satisfied_alt_outlined, size: 44, color: Colors.grey.shade400),
+          Icon(
+            Icons.sentiment_satisfied_alt_outlined,
+            size: 44,
+            color: Colors.grey.shade400,
+          ),
           const SizedBox(height: 12),
           Text(
             'No upcoming celebrations in next 7 days, till\nthen celebrate the small wins!',
@@ -526,11 +609,19 @@ class _HomeScreenState extends State<HomeScreen> {
             color: const Color(0xFFEFF6FF),
             shape: BoxShape.circle,
           ),
-          child: const Icon(Icons.auto_awesome, color: Color(0xFF2563EB), size: 20),
+          child: const Icon(
+            Icons.auto_awesome,
+            color: Color(0xFF2563EB),
+            size: 20,
+          ),
         ),
         title: const Text(
           'Upcoming holidays',
-          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: Color(0xFF1E293B)),
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+            color: Color(0xFF1E293B),
+          ),
         ),
         subtitle: const Text(
           'Find out what holidays are coming up',
@@ -547,5 +638,9 @@ class _QuickAction {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-  const _QuickAction({required this.icon, required this.label, required this.onTap});
+  const _QuickAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 }

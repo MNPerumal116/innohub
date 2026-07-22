@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:developer' as developer;
 import 'package:http/http.dart' as http;
+import 'package:flutter/material.dart';
+import '../../routes/app_routes.dart';
 import 'api_constants.dart';
 import '../storage/token_storage.dart';
 
@@ -41,6 +43,14 @@ class ApiClient {
     return _executeWithRetry('PUT', url, body, requiresAuth);
   }
 
+  Future<Map<String, dynamic>> patch(
+    String url,
+    Map<String, dynamic> body, {
+    bool requiresAuth = true,
+  }) async {
+    return _executeWithRetry('PATCH', url, body, requiresAuth);
+  }
+
   Future<Map<String, dynamic>> delete(
     String url, {
     Map<String, dynamic>? body,
@@ -70,13 +80,17 @@ class ApiClient {
         return _client.post(uri, headers: headers, body: encodedBody);
       case 'PUT':
         return _client.put(uri, headers: headers, body: encodedBody);
+      case 'PATCH':
+        return _client.patch(uri, headers: headers, body: encodedBody);
       case 'DELETE':
         return encodedBody != null
             ? _client.delete(uri, headers: headers, body: encodedBody)
             : _client.delete(uri, headers: headers);
       default:
         throw ApiException(
-            message: 'Unsupported HTTP method: $method', statusCode: 0);
+          message: 'Unsupported HTTP method: $method',
+          statusCode: 0,
+        );
     }
   }
 
@@ -86,6 +100,10 @@ class ApiClient {
       final token = await _storage.getAuthToken();
       if (token != null && token.isNotEmpty) {
         headers['Authorization'] = 'Bearer $token';
+      }
+      final sessionId = await _storage.getSessionId();
+      if (sessionId != null && sessionId.isNotEmpty) {
+        headers['session_id'] = sessionId;
       }
     }
     return headers;
@@ -114,10 +132,7 @@ class ApiClient {
       rethrow;
     } catch (e) {
       _logError(method, url, e);
-      throw ApiException(
-        message: _networkErrorMessage(e),
-        statusCode: 0,
-      );
+      throw ApiException(message: _networkErrorMessage(e), statusCode: 0);
     }
   }
 
@@ -128,16 +143,21 @@ class ApiClient {
       final refreshToken = await _storage.getRefreshToken();
       if (sessionId == null || refreshToken == null) return false;
 
-      final reqBody = {
-        'session_id': sessionId,
-        'refresh_token': refreshToken,
-      };
-      _logRequest('POST [REFRESH]', ApiConstants.refreshToken,
-          ApiConstants.jsonHeaders, reqBody);
+      final reqBody = {'session_id': sessionId, 'refresh_token': refreshToken};
+
+      final headers = Map<String, String>.from(ApiConstants.jsonHeaders);
+      headers['session_id'] = sessionId;
+
+      _logRequest(
+        'POST [REFRESH]',
+        ApiConstants.refreshToken,
+        headers,
+        reqBody,
+      );
 
       final response = await _client.post(
         Uri.parse(ApiConstants.refreshToken),
-        headers: ApiConstants.jsonHeaders,
+        headers: headers,
         body: jsonEncode(reqBody),
       );
 
@@ -155,7 +175,22 @@ class ApiClient {
     } catch (e) {
       _logError('POST [REFRESH]', ApiConstants.refreshToken, e);
     }
+
+    // If we reach here, refresh failed. Force a logout.
+    await _forceLogout();
     return false;
+  }
+
+  Future<void> _forceLogout() async {
+    await _storage.clearAll();
+    final context = AppRoutes.navigatorKey.currentContext;
+    if (context != null) {
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRoutes.login,
+        (route) => false,
+      );
+    }
   }
 
   Map<String, dynamic> _handleResponse(http.Response response) {
@@ -170,7 +205,8 @@ class ApiClient {
     }
 
     // Extract error message: check all known error key names the API may use
-    final message = decoded?['detail'] as String? ??
+    final message =
+        decoded?['detail'] as String? ??
         decoded?['message'] as String? ??
         decoded?['error'] as String? ??
         decoded?['error_description'] as String? ??
@@ -187,13 +223,7 @@ class ApiClient {
     Map<String, String> headers,
     Map<String, dynamic>? body,
   ) {
-    // Truncate Authorization token for readability
     final safeHeaders = Map<String, String>.from(headers);
-    if (safeHeaders.containsKey('Authorization')) {
-      final token = safeHeaders['Authorization']!;
-      safeHeaders['Authorization'] =
-          token.length > 30 ? '${token.substring(0, 30)}…' : token;
-    }
 
     final prettyBody = body != null
         ? const JsonEncoder.withIndent('  ').convert(body)
@@ -220,8 +250,9 @@ class ApiClient {
       prettyBody = response.body;
     }
 
-    final icon =
-        response.statusCode >= 200 && response.statusCode < 300 ? '✅' : '❌';
+    final icon = response.statusCode >= 200 && response.statusCode < 300
+        ? '✅'
+        : '❌';
 
     developer.log(
       '\n┌─────────────────────────────────────────────────\n'
@@ -251,17 +282,28 @@ class ApiClient {
 
   String _statusCodeMessage(int code) {
     switch (code) {
-      case 400: return 'Bad request. Please check your input.';
-      case 401: return 'Incorrect email or password.';
-      case 403: return 'You do not have permission to perform this action.';
-      case 404: return 'The requested resource was not found.';
-      case 408: return 'The request timed out. Please try again.';
-      case 422: return 'Validation error. Please check your input.';
-      case 429: return 'Too many requests. Please wait and try again.';
-      case 500: return 'A server error occurred. Please try again later.';
-      case 502: return 'Server is temporarily unavailable. Please try again.';
-      case 503: return 'Service unavailable. Please try again later.';
-      default:  return 'Something went wrong (HTTP $code).';
+      case 400:
+        return 'Bad request. Please check your input.';
+      case 401:
+        return 'Incorrect email or password.';
+      case 403:
+        return 'You do not have permission to perform this action.';
+      case 404:
+        return 'The requested resource was not found.';
+      case 408:
+        return 'The request timed out. Please try again.';
+      case 422:
+        return 'Validation error. Please check your input.';
+      case 429:
+        return 'Too many requests. Please wait and try again.';
+      case 500:
+        return 'A server error occurred. Please try again later.';
+      case 502:
+        return 'Server is temporarily unavailable. Please try again.';
+      case 503:
+        return 'Service unavailable. Please try again later.';
+      default:
+        return 'Something went wrong (HTTP $code).';
     }
   }
 

@@ -1,29 +1,12 @@
 import 'package:flutter/material.dart';
-import '../routes/app_routes.dart';
+import '../../routes/app_routes.dart';
 
-class Employee {
-  final String name;
-  final String role;
-  final String id;
-  final String department;
-  final String manager;
-  final String joinedDate;
-  final String status;
-  final String location;
-  final String initials;
-
-  Employee({
-    required this.name,
-    required this.role,
-    required this.id,
-    required this.department,
-    required this.manager,
-    required this.joinedDate,
-    required this.status,
-    required this.location,
-    required this.initials,
-  });
-}
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'bloc/employee_bloc.dart';
+import 'bloc/employee_event.dart';
+import 'bloc/employee_state.dart';
+import 'model/employee_model.dart';
+import '../../../widgets/common_loader.dart';
 
 class EmployeeDirectoryScreen extends StatefulWidget {
   const EmployeeDirectoryScreen({super.key});
@@ -38,63 +21,11 @@ enum ViewMode { list, grid, orgChart }
 class _EmployeeDirectoryScreenState extends State<EmployeeDirectoryScreen> {
   ViewMode _viewMode = ViewMode.grid;
 
-  final List<Employee> _employees = [
-    Employee(
-      name: 'Sarah Jenkins',
-      role: 'Senior Frontend Engineer',
-      id: '#EMP-2045',
-      department: 'Engineering',
-      manager: 'Marcus Thorne',
-      joinedDate: 'Jan 12, 2022',
-      status: 'ACTIVE',
-      location: 'SF, USA',
-      initials: 'SJ',
-    ),
-    Employee(
-      name: 'Liam Anderson',
-      role: 'Lead Product Designer',
-      id: '#EMP-1982',
-      department: 'Design',
-      manager: 'Elena Rodriguez',
-      joinedDate: 'Mar 05, 2021',
-      status: 'REMOTE',
-      location: 'London, UK',
-      initials: 'LA',
-    ),
-    Employee(
-      name: 'Olivia Martinez',
-      role: 'HR Coordinator',
-      id: '#EMP-2101',
-      department: 'Human Resources',
-      manager: 'David Chen',
-      joinedDate: 'Oct 19, 2023',
-      status: 'ON LEAVE',
-      location: 'Madrid, ESP',
-      initials: 'OM',
-    ),
-    Employee(
-      name: 'James Wilson',
-      role: 'Accountant',
-      id: '#EMP-1854',
-      department: 'Sales',
-      manager: 'Sarah Jenkins',
-      joinedDate: 'Jun 30, 2020',
-      status: 'ACTIVE',
-      location: 'Seoul, KR',
-      initials: 'JW',
-    ),
-    Employee(
-      name: 'Sophia Kwok',
-      role: 'Marketing Specialist',
-      id: '#EMP-2231',
-      department: 'Devops',
-      manager: 'Elena Rodriguez',
-      joinedDate: 'Feb 14, 2024',
-      status: 'ACTIVE',
-      location: 'Tokyo, JP',
-      initials: 'SK',
-    ),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    context.read<EmployeeBloc>().add(FetchEmployees());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -312,24 +243,42 @@ class _EmployeeDirectoryScreenState extends State<EmployeeDirectoryScreen> {
           ),
 
           Expanded(
-            child: _viewMode == ViewMode.list
-                ? _buildListView()
-                : _viewMode == ViewMode.grid
-                ? _buildGridView()
-                : _buildOrgChart(),
+            child: BlocBuilder<EmployeeBloc, EmployeeState>(
+              builder: (context, state) {
+                if (state is EmployeeLoading) {
+                  return const CommonLoader(message: 'Loading employees...');
+                } else if (state is EmployeeError) {
+                  return Center(child: Text('Error: ${state.message}'));
+                } else if (state is EmployeeLoaded) {
+                  final emps = state.employees;
+                  if (emps.isEmpty)
+                    return const Center(child: Text('No employees found.'));
+
+                  if (_viewMode == ViewMode.list) {
+                    return _buildListView(emps);
+                  } else if (_viewMode == ViewMode.grid) {
+                    return _buildGridView(emps);
+                  } else {
+                    return _buildOrgChart();
+                  }
+                }
+                return const SizedBox();
+              },
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildListView() {
+  Widget _buildListView(List<Employee> employees) {
     return ListView.separated(
       padding: const EdgeInsets.all(16),
-      itemCount: _employees.length,
+      itemCount: employees.length,
       separatorBuilder: (context, index) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
-        final emp = _employees[index];
+        var emp = employees[index];
+        var initials = emp.displayName.isNotEmpty ? emp.displayName[0] : 'U';
         return GestureDetector(
           onTap: () => Navigator.pushNamed(
             context,
@@ -354,7 +303,7 @@ class _EmployeeDirectoryScreenState extends State<EmployeeDirectoryScreen> {
                         radius: 24,
                         backgroundColor: const Color(0xFFEFF6FF),
                         child: Text(
-                          emp.initials,
+                          initials,
                           style: const TextStyle(
                             color: Color(0xFF2563EB),
                             fontWeight: FontWeight.bold,
@@ -367,7 +316,7 @@ class _EmployeeDirectoryScreenState extends State<EmployeeDirectoryScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              emp.name,
+                              emp.displayName,
                               style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
@@ -376,7 +325,7 @@ class _EmployeeDirectoryScreenState extends State<EmployeeDirectoryScreen> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              '${emp.role} • ${emp.department}',
+                              '${emp.jobTitle} • ${emp.department}',
                               style: const TextStyle(
                                 fontSize: 13,
                                 color: Color(0xFF64748B),
@@ -385,7 +334,7 @@ class _EmployeeDirectoryScreenState extends State<EmployeeDirectoryScreen> {
                           ],
                         ),
                       ),
-                      _buildStatusPill(emp.status),
+                      _buildStatusPill(emp.isActive ? 'ACTIVE' : 'INACTIVE'),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -420,7 +369,7 @@ class _EmployeeDirectoryScreenState extends State<EmployeeDirectoryScreen> {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            emp.id,
+                            emp.employeeNumber,
                             style: const TextStyle(
                               fontSize: 12,
                               color: Color(0xFF64748B),
@@ -439,7 +388,7 @@ class _EmployeeDirectoryScreenState extends State<EmployeeDirectoryScreen> {
     );
   }
 
-  Widget _buildGridView() {
+  Widget _buildGridView(List<Employee> employees) {
     return GridView.builder(
       padding: const EdgeInsets.all(16),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -449,9 +398,10 @@ class _EmployeeDirectoryScreenState extends State<EmployeeDirectoryScreen> {
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
       ),
-      itemCount: _employees.length,
+      itemCount: employees.length,
       itemBuilder: (context, index) {
-        final emp = _employees[index];
+        final emp = employees[index];
+        final initials = emp.displayName.isNotEmpty ? emp.displayName[0] : 'U';
         return GestureDetector(
           onTap: () => Navigator.pushNamed(
             context,
@@ -469,13 +419,13 @@ class _EmployeeDirectoryScreenState extends State<EmployeeDirectoryScreen> {
               children: [
                 Align(
                   alignment: Alignment.topRight,
-                  child: _buildStatusPill(emp.status),
+                  child: _buildStatusPill(emp.isActive ? 'ACTIVE' : 'INACTIVE'),
                 ),
                 CircleAvatar(
                   radius: 32,
                   backgroundColor: const Color(0xFFEFF6FF),
                   child: Text(
-                    emp.initials,
+                    initials,
                     style: const TextStyle(
                       color: Color(0xFF2563EB),
                       fontWeight: FontWeight.bold,
@@ -489,7 +439,7 @@ class _EmployeeDirectoryScreenState extends State<EmployeeDirectoryScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        emp.name,
+                        emp.displayName,
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
@@ -501,7 +451,7 @@ class _EmployeeDirectoryScreenState extends State<EmployeeDirectoryScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${emp.role}\n${emp.department}',
+                        '${emp.jobTitle}\n${emp.department}',
                         style: const TextStyle(
                           fontSize: 11,
                           color: Color(0xFF64748B),

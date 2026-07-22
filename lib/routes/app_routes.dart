@@ -13,12 +13,14 @@ import '../screens/payslips_screen.dart';
 import '../screens/settings_screen.dart';
 import '../screens/confirm_clock_in_screen.dart';
 import '../screens/selfie_verification_screen.dart';
-import '../screens/employee_directory_screen.dart';
-import '../screens/add_employee_screen.dart';
-import '../screens/employee_profile_admin_screen.dart';
-import '../screens/employee_profile_view_screen.dart';
-
+import '../features/employee/employee_directory_screen.dart';
+import '../features/employee/add_employee_screen.dart';
+import '../features/employee/employee_profile_admin_screen.dart';
+import '../features/employee/employee_profile_view_screen.dart';
+import '../features/employee/edit_employee_screen.dart';
 class AppRoutes {
+  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
   static const String splash = '/splash';
   static const String login = '/login';
 
@@ -30,7 +32,7 @@ class AppRoutes {
   static const String addEmployee = '/employees/add';
   static const String employeeProfileAdmin = '/employee/profile-admin';
   static const String employeeProfileView = '/employee/profile-view';
-
+  static const String editEmployee = '/employee/edit';
   // Attendance
   static const String attendanceHistory = '/attendance/history';
   static const String confirmClockIn = '/attendance/confirm-clock-in';
@@ -95,6 +97,13 @@ class AppRoutes {
       return MaterialPageRoute(
         settings: routeSettings,
         builder: (_) => EmployeeProfileViewScreen(employee: emp),
+      );
+    }
+    if (routeSettings.name == editEmployee) {
+      final emp = routeSettings.arguments as dynamic;
+      return MaterialPageRoute(
+        settings: routeSettings,
+        builder: (_) => EditEmployeeScreen(employee: emp),
       );
     }
     return null;

@@ -9,6 +9,9 @@ class ApiConstants {
   // ── Auth endpoints ──────────────────────────────────────────────────────────
   static const String login = '$baseUrl/auth/login';
   static const String refreshToken = '$baseUrl/auth/refresh-token';
+  static const String employees = '$baseUrl/employees';
+  static String employeeDetail(int id) => '$baseUrl/employees/$id';
+  static String employeeDeactivate(int id) => '$baseUrl/employees/$id/deactivate';
 
   // ── Common headers ──────────────────────────────────────────────────────────
   static Map<String, String> get jsonHeaders => {

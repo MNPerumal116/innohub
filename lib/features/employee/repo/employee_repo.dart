@@ -45,4 +45,15 @@ class EmployeeRepo {
       requiresAuth: true,
     );
   }
+
+  /// Registers a new employee. Returns the created employee_id.
+  Future<int> registerEmployee(Map<String, dynamic> data) async {
+    final json = await _apiClient.post(
+      ApiConstants.employeeRegistration,
+      data,
+      requiresAuth: true,
+    );
+    // Response: {"message": "Employee created.", "data": {"employee_id": 21}}
+    return (json['data']['employee_id'] as int?) ?? 0;
+  }
 }

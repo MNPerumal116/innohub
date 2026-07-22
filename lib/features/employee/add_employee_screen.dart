@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'bloc/employee_bloc.dart';
+import 'bloc/employee_event.dart';
+import 'repo/employee_repo.dart';
+import '../../routes/app_routes.dart';
 
 class AddEmployeeScreen extends StatefulWidget {
   const AddEmployeeScreen({super.key});
@@ -45,6 +50,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
   );
   String _workerType = 'Permanent';
   final _managerCtrl = TextEditingController(text: 'Sonny Ben');
+  String _role = 'employee';
   String _probationPolicy = 'Default Probation Policy';
   String _noticePeriod = 'Default Notice Period';
 
@@ -66,6 +72,14 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
   String _payGroup = 'Default pay group';
   final _annualSalaryCtrl = TextEditingController();
   bool _bonusIncluded = false;
+  bool _bonusNameError = false;
+  String _bonusName = 'Select or create bonus';
+  String _bonusAmountType = 'Fixed Value';
+  final _bonusAmountCtrl = TextEditingController();
+  final _bonusDueDateCtrl = TextEditingController();
+  final _bonusNoteCtrl = TextEditingController();
+
+  bool _isSubmitting = false;
   bool _pfEligible = false;
   bool _eelEligible = false;
   bool _lufEligible = false;
@@ -100,6 +114,9 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
     _managerCtrl.dispose();
     _attendanceNumberCtrl.dispose();
     _annualSalaryCtrl.dispose();
+    _bonusAmountCtrl.dispose();
+    _bonusDueDateCtrl.dispose();
+    _bonusNoteCtrl.dispose();
     super.dispose();
   }
 
@@ -111,6 +128,142 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
     );
+  }
+
+  Future<void> _submitEmployee() async {
+    // Validate bonus name if bonus is enabled
+    if (_bonusIncluded && _bonusName == 'Select or create bonus') {
+      setState(() => _bonusNameError = true);
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+    try {
+      // Parse joining date: "30 Jun 2026" → "2026-06-30"
+      String joiningDate = _joiningDateCtrl.text;
+      try {
+        final months = [
+          'Jan',
+          'Feb',
+          'Mar',
+          'Apr',
+          'May',
+          'Jun',
+          'Jul',
+          'Aug',
+          'Sep',
+          'Oct',
+          'Nov',
+          'Dec',
+        ];
+        final parts = joiningDate.split(' ');
+        if (parts.length == 3) {
+          final d = parts[0].padLeft(2, '0');
+          final m = (months.indexOf(parts[1]) + 1).toString().padLeft(2, '0');
+          final y = parts[2];
+          joiningDate = '$y-$m-$d';
+        }
+      } catch (_) {}
+
+      final payload = <String, dynamic>{
+        'email': _workEmailCtrl.text.trim(),
+        'employee_number': _employeeNumberCtrl.text.trim(),
+        'work_country': _workCountry,
+        'first_name': _firstNameCtrl.text.trim(),
+        'middle_name': _middleNameCtrl.text.trim().isEmpty
+            ? null
+            : _middleNameCtrl.text.trim(),
+        'last_name': _lastNameCtrl.text.trim(),
+        'display_name': _displayNameCtrl.text.trim().isEmpty
+            ? _firstNameCtrl.text.trim()
+            : _displayNameCtrl.text.trim(),
+        'gender': _gender,
+        'date_of_birth': () {
+          if (_dob.isEmpty) return null;
+          // _dob is stored as dd/MM/yyyy → convert to yyyy-MM-dd for the API
+          final parts = _dob.split('/');
+          if (parts.length == 3) return '${parts[2]}-${parts[1]}-${parts[0]}';
+          return _dob;
+        }(),
+        'nationality': _nationality,
+        'joining_date': joiningDate,
+        'job_title': _jobTitleCtrl.text.trim(),
+        'time_type': _timeType,
+        'department': _departmentCtrl.text.trim(),
+        'location': _locationCtrl.text.trim(),
+        'worker_type': _workerType,
+        'probation_period_months': 0,
+        'notice_period_days': 0,
+        'role': _role,
+        'is_active': true,
+      };
+      print(payload.toString());
+
+      // manager_id: only if numeric
+      final managerText = _managerCtrl.text.trim();
+      final managerId = int.tryParse(managerText);
+      if (managerId != null) payload['manager_id'] = managerId;
+
+      await EmployeeRepo.instance.registerEmployee(payload);
+
+      if (!mounted) return;
+
+      // Reload the employee list
+      context.read<EmployeeBloc>().add(FetchEmployees());
+
+      // Show success toast
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.white, size: 20),
+              SizedBox(width: 10),
+              Text(
+                'Employee created successfully!',
+                style: TextStyle(color: Colors.white, fontSize: 13),
+              ),
+            ],
+          ),
+          backgroundColor: const Color(0xFF16A34A),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          margin: const EdgeInsets.all(16),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+
+      // Navigate back to the employee directory
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRoutes.employeeDirectory,
+        (route) => route.settings.name == AppRoutes.homeShell || route.isFirst,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error_outline, color: Colors.white, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  e.toString().replaceFirst('Exception: ', ''),
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: const Color(0xFFDC2626),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          margin: const EdgeInsets.all(16),
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
   }
 
   @override
@@ -267,19 +420,19 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
             ),
             const SizedBox(width: 10),
             ElevatedButton(
-              onPressed: () {
-                if (_currentStep < 3) {
-                  _goToStep(_currentStep + 1);
-                } else {
-                  Navigator.pushReplacementNamed(
-                    context,
-                    '/employee/profile-admin',
-                  );
-                }
-              },
+              onPressed: _isSubmitting
+                  ? null
+                  : () {
+                      if (_currentStep < 3) {
+                        _goToStep(_currentStep + 1);
+                      } else {
+                        _submitEmployee();
+                      }
+                    },
               style: ElevatedButton.styleFrom(
                 backgroundColor: _primary,
                 foregroundColor: Colors.white,
+                disabledBackgroundColor: _primary.withOpacity(0.6),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -289,13 +442,22 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                 ),
                 elevation: 0,
               ),
-              child: Text(
-                _currentStep == 3 ? 'Complete' : 'Next',
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              child: _isSubmitting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Text(
+                      _currentStep == 3 ? 'Complete' : 'Next',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
             ),
           ],
         ),
@@ -435,6 +597,12 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                 _managerCtrl,
                 hint: 'Search manager...',
               ),
+              _dropdown('Role *', _role, [
+                'employee',
+                'manager',
+                'hr',
+                'admin',
+              ], (v) => setState(() => _role = v!)),
             ],
           ),
           const SizedBox(height: 16),
@@ -648,66 +816,308 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
               title: 'Bonus Details',
               children: [
                 _checkRow(
-                  'Bonus amount is included in the annual salary of INR 0',
+                  'Bonus amount is included in the new salary of INR 9,00,000',
                   _bonusIncluded,
-                  (v) => setState(() => _bonusIncluded = v!),
+                  (v) => setState(() {
+                    _bonusIncluded = v!;
+                    if (!_bonusIncluded) _bonusNameError = false;
+                  }),
                 ),
-                const SizedBox(height: 4),
-                OutlinedButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(
-                    Icons.add,
-                    size: 14,
-                    color: Color(0xFF2563EB),
-                  ),
-                  label: const Text(
-                    'Add Bonus',
-                    style: TextStyle(color: Color(0xFF2563EB), fontSize: 13),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Color(0xFF2563EB)),
-                    shape: RoundedRectangleBorder(
+                if (_bonusIncluded) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
                       borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
                     ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 10,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Bonus Name
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Bonus Name *',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: _labelColor,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            DropdownButtonFormField<String>(
+                              value: _bonusName,
+                              decoration: InputDecoration(
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 12,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(6),
+                                  borderSide: BorderSide(
+                                    color: _bonusNameError
+                                        ? Colors.redAccent
+                                        : _border,
+                                  ),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(6),
+                                  borderSide: BorderSide(
+                                    color: _bonusNameError
+                                        ? Colors.redAccent
+                                        : _border,
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(6),
+                                  borderSide: BorderSide(
+                                    color: _bonusNameError
+                                        ? Colors.redAccent
+                                        : _primary,
+                                    width: 1.5,
+                                  ),
+                                ),
+                                filled: true,
+                                fillColor: Colors.white,
+                              ),
+                              items: const [
+                                DropdownMenuItem(
+                                  value: 'Select or create bonus',
+                                  child: Text('Select or create bonus'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'Annual Bonus',
+                                  child: Text('Annual Bonus'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'Performance Bonus',
+                                  child: Text('Performance Bonus'),
+                                ),
+                              ],
+                              onChanged: (v) => setState(() {
+                                _bonusName = v!;
+                                _bonusNameError =
+                                    (v == 'Select or create bonus');
+                              }),
+                            ),
+                            if (_bonusNameError)
+                              const Padding(
+                                padding: EdgeInsets.only(top: 4),
+                                child: Text(
+                                  'Bonus type is required',
+                                  style: TextStyle(
+                                    color: Colors.redAccent,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        // Amount
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Amount',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: _labelColor,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 14,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF1F5F9),
+                                    border: Border.all(color: _border),
+                                    borderRadius: const BorderRadius.horizontal(
+                                      left: Radius.circular(6),
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'INR',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                      color: _dark,
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: TextField(
+                                    controller: _bonusAmountCtrl,
+                                    keyboardType: TextInputType.number,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: _dark,
+                                    ),
+                                    decoration: const InputDecoration(
+                                      hintText: 'Enter bonus amount',
+                                      hintStyle: TextStyle(
+                                        color: _muted,
+                                        fontSize: 12,
+                                      ),
+                                      contentPadding: EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 14,
+                                      ),
+                                      border: OutlineInputBorder(
+                                        borderSide: BorderSide(color: _border),
+                                        borderRadius: BorderRadius.zero,
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderSide: BorderSide(color: _border),
+                                        borderRadius: BorderRadius.zero,
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderSide: BorderSide(
+                                          color: _primary,
+                                          width: 1.5,
+                                        ),
+                                        borderRadius: BorderRadius.zero,
+                                      ),
+                                      filled: true,
+                                      fillColor: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 14,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    border: Border.all(color: _border),
+                                    borderRadius: const BorderRadius.horizontal(
+                                      right: Radius.circular(6),
+                                    ),
+                                  ),
+                                  child: DropdownButtonHideUnderline(
+                                    child: DropdownButton<String>(
+                                      value: _bonusAmountType,
+                                      isDense: true,
+                                      icon: const Icon(
+                                        Icons.keyboard_arrow_down,
+                                        size: 15,
+                                        color: _muted,
+                                      ),
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: _dark,
+                                      ),
+                                      items: const [
+                                        DropdownMenuItem(
+                                          value: 'Fixed Value',
+                                          child: Text('Fixed Value'),
+                                        ),
+                                        DropdownMenuItem(
+                                          value: 'Percentage',
+                                          child: Text('Percentage'),
+                                        ),
+                                      ],
+                                      onChanged: (v) =>
+                                          setState(() => _bonusAmountType = v!),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            const Text(
+                              '0 % of new salary',
+                              style: TextStyle(color: _muted, fontSize: 11),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        // Due Date
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Due Date',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: _labelColor,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            TextField(
+                              controller: _bonusDueDateCtrl,
+                              readOnly: true,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: _dark,
+                              ),
+                              onTap: () async {
+                                final picked = await showDatePicker(
+                                  context: context,
+                                  initialDate: DateTime.now(),
+                                  firstDate: DateTime(2020),
+                                  lastDate: DateTime(2035),
+                                );
+                                if (picked != null) {
+                                  setState(() {
+                                    _bonusDueDateCtrl.text =
+                                        '${picked.day.toString().padLeft(2, '0')} ${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][picked.month - 1]} ${picked.year}';
+                                  });
+                                }
+                              },
+                              decoration: InputDecoration(
+                                hintText: 'Payout date',
+                                hintStyle: const TextStyle(
+                                  color: _muted,
+                                  fontSize: 12,
+                                ),
+                                suffixIcon: const Icon(
+                                  Icons.calendar_today_outlined,
+                                  size: 16,
+                                  color: _muted,
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 14,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(6),
+                                  borderSide: const BorderSide(color: _border),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(6),
+                                  borderSide: const BorderSide(color: _border),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(6),
+                                  borderSide: const BorderSide(
+                                    color: _primary,
+                                    width: 1.5,
+                                  ),
+                                ),
+                                filled: true,
+                                fillColor: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        // Note
+                        _textField('Note', _bonusNoteCtrl, hint: 'Note'),
+                      ],
                     ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            _sectionCard(
-              icon: Icons.star_border,
-              title: 'Perks Details',
-              children: [
-                Text(
-                  "Add an existing perk to this offer",
-                  style: const TextStyle(fontSize: 13, color: _dark),
-                ),
-                OutlinedButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(
-                    Icons.add,
-                    size: 14,
-                    color: Color(0xFF2563EB),
-                  ),
-                  label: const Text(
-                    'Add Perks',
-                    style: TextStyle(color: Color(0xFF2563EB), fontSize: 13),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Color(0xFF2563EB)),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 10,
-                    ),
-                  ),
-                ),
+                ],
               ],
             ),
             const SizedBox(height: 16),

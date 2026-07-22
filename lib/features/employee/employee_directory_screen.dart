@@ -259,7 +259,7 @@ class _EmployeeDirectoryScreenState extends State<EmployeeDirectoryScreen> {
                   } else if (_viewMode == ViewMode.grid) {
                     return _buildGridView(emps);
                   } else {
-                    return _buildOrgChart();
+                    return _buildOrgChart(emps);
                   }
                 }
                 return const SizedBox();
@@ -343,39 +343,55 @@ class _EmployeeDirectoryScreenState extends State<EmployeeDirectoryScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.location_on_outlined,
-                            size: 14,
-                            color: Color(0xFF94A3B8),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            emp.location,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Color(0xFF64748B),
+                      Flexible(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.location_on_outlined,
+                              size: 14,
+                              color: Color(0xFF94A3B8),
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                emp.location,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF64748B),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.badge_outlined,
-                            size: 14,
-                            color: Color(0xFF94A3B8),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            emp.employeeNumber,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Color(0xFF64748B),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            const Icon(
+                              Icons.badge_outlined,
+                              size: 14,
+                              color: Color(0xFF94A3B8),
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                emp.employeeNumber,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF64748B),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -492,38 +508,81 @@ class _EmployeeDirectoryScreenState extends State<EmployeeDirectoryScreen> {
     );
   }
 
-  Widget _buildOrgChart() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.account_tree, size: 64, color: Color(0xFFCBD5E1)),
-          const SizedBox(height: 16),
-          const Text(
-            'Org Chart View',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF334155),
+  // ─── Org Chart ────────────────────────────────────────────────────────────
+
+  static const List<Color> _avatarColors = [
+    Color(0xFF2563EB), Color(0xFF7C3AED), Color(0xFF059669),
+    Color(0xFFD97706), Color(0xFFDC2626), Color(0xFF0891B2),
+    Color(0xFFDB2777), Color(0xFF65A30D), Color(0xFF9333EA),
+  ];
+
+  Widget _buildOrgChart(List<Employee> employees) {
+    if (employees.isEmpty) {
+      return const Center(child: Text('No hierarchy data available.'));
+    }
+
+    final ids = employees.map((e) => e.id).toSet();
+
+    // 1. Identify ALL owners
+    final owners = employees.where((e) =>
+        (e.managerId == null || e.managerId == 0) && e.role == 'admin').toList();
+
+    // 2. Build manager→children map
+    final Map<int?, List<Employee>> childrenOf = {};
+    final Set<int> ownerIds = owners.map((o) => o.id).toSet();
+
+    for (final e in employees) {
+      if (ownerIds.contains(e.id)) continue;
+
+      int? effectiveManagerId = e.managerId;
+
+      // Attach to owner group (-1) if they have no manager, or their manager is an owner, or their manager is invalid
+      if (owners.isNotEmpty &&
+          (effectiveManagerId == null ||
+              effectiveManagerId == 0 ||
+              ownerIds.contains(effectiveManagerId) ||
+              !ids.contains(effectiveManagerId))) {
+        effectiveManagerId = -1;
+      }
+
+      childrenOf.putIfAbsent(effectiveManagerId, () => []).add(e);
+    }
+
+    // 3. Define roots
+    List<Employee> roots = [];
+    if (owners.isEmpty) {
+      roots = employees.where((e) =>
+          e.managerId == null ||
+          e.managerId == 0 ||
+          !ids.contains(e.managerId)).toList();
+    }
+
+    if (owners.isEmpty && roots.isEmpty) {
+      return const Center(child: Text('No hierarchy data available.'));
+    }
+
+    return InteractiveViewer(
+      constrained: false,
+      boundaryMargin: const EdgeInsets.all(64),
+      minScale: 0.4,
+      maxScale: 2.0,
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: _OrgTreeWidget(
+            owners: owners,
+            roots: roots,
+            topLevelChildren: childrenOf[-1] ?? [],
+            childrenOf: childrenOf,
+            avatarColors: _avatarColors,
+            onTap: (emp) => Navigator.pushNamed(
+              context,
+              AppRoutes.employeeProfileView,
+              arguments: emp,
             ),
           ),
-          const SizedBox(height: 8),
-          const Text(
-            'Detailed hierarchy mapping will be displayed here.',
-            style: TextStyle(color: Color(0xFF64748B)),
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: () {},
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2563EB),
-            ),
-            child: const Text(
-              'Add Node',
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -658,3 +717,344 @@ class _EmployeeDirectoryScreenState extends State<EmployeeDirectoryScreen> {
     );
   }
 }
+
+// ════════════════════════════════════════════════════════════════════
+// Org Tree Widget – renders a recursive top-down hierarchy
+// ════════════════════════════════════════════════════════════════════
+
+class _OrgTreeWidget extends StatelessWidget {
+  final List<Employee> owners;
+  final List<Employee> roots;
+  final List<Employee> topLevelChildren;
+  final Map<int?, List<Employee>> childrenOf;
+  final List<Color> avatarColors;
+  final void Function(Employee) onTap;
+
+  const _OrgTreeWidget({
+    required this.owners,
+    required this.roots,
+    required this.topLevelChildren,
+    required this.childrenOf,
+    required this.avatarColors,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (owners.isNotEmpty) {
+      int totalOwnerDescendants = topLevelChildren.length;
+      for (final c in topLevelChildren) {
+        totalOwnerDescendants += _countDescendants(c.id);
+      }
+
+      final ownersRow = Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          border: Border.all(color: const Color(0xFF64748B).withOpacity(0.4), width: 1.5, style: BorderStyle.solid),
+          borderRadius: BorderRadius.circular(20),
+          color: const Color(0xFFF8FAFC),
+        ),
+        child: Column(
+          children: [
+            const Text(
+              'BOARD OF DIRECTORS',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF64748B),
+                letterSpacing: 1.2,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: owners
+                  .map((o) => _buildNodeCard(o, forcedChildCount: totalOwnerDescendants))
+                  .toList(),
+            ),
+          ],
+        ),
+      );
+
+      if (topLevelChildren.isEmpty) {
+        return ownersRow;
+      }
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          ownersRow,
+          CustomPaint(
+            size: const Size(2, 28),
+            painter: _VLinePainter(),
+          ),
+          _buildChildrenRow(topLevelChildren, 1),
+        ],
+      );
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: roots.map((root) => _buildSubtree(root, 0)).toList(),
+    );
+  }
+
+  Widget _buildNodeCard(Employee node, {int? forcedChildCount}) {
+    final color = avatarColors[node.id % avatarColors.length];
+    final initials = _initials(node.displayName);
+    final childCount = forcedChildCount ?? _countDescendants(node.id);
+
+    return GestureDetector(
+      onTap: () => onTap(node),
+      child: Container(
+        width: 200,
+        margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x14000000),
+              blurRadius: 8,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          children: [
+            // Avatar
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              alignment: Alignment.center,
+              child: Text(
+                initials,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            // Name
+            Text(
+              node.displayName,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1E293B),
+              ),
+            ),
+            const SizedBox(height: 3),
+            // Job title
+            Text(
+              node.jobTitle,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+            ),
+            const SizedBox(height: 2),
+            // Department chip
+            Text(
+              node.department.toUpperCase(),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF94A3B8),
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 5),
+            // Employee number / ID
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.badge_outlined, size: 11, color: Color(0xFFCBD5E1)),
+                const SizedBox(width: 3),
+                Flexible(
+                  child: Text(
+                    node.employeeNumber.isNotEmpty
+                        ? node.employeeNumber
+                        : '#${node.id}',
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: Color(0xFFCBD5E1),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            // Subordinate count badge
+            if (childCount > 0) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '$childCount',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSubtree(Employee node, int depth) {
+    final children = childrenOf[node.id] ?? [];
+    final nodeCard = _buildNodeCard(node);
+
+    if (children.isEmpty) {
+      return nodeCard;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        nodeCard,
+        // Vertical connector from card to horizontal bar
+        CustomPaint(
+          size: const Size(2, 28),
+          painter: _VLinePainter(),
+        ),
+        // Children row with connectors
+        _buildChildrenRow(children, depth + 1),
+      ],
+    );
+  }
+
+  Widget _buildChildrenRow(List<Employee> children, int depth) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(children.length, (index) {
+        final isFirst = index == 0;
+        final isLast = index == children.length - 1;
+        final isOnly = children.length == 1;
+
+        return CustomPaint(
+          painter: _NodeConnectorPainter(
+            isFirst: isFirst,
+            isLast: isLast,
+            isOnly: isOnly,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.only(top: 28.0),
+            child: _buildSubtree(children[index], depth),
+          ),
+        );
+      }),
+    );
+  }
+
+  int _countDescendants(int id) {
+    final directChildren = childrenOf[id] ?? [];
+    int count = directChildren.length;
+    for (final c in directChildren) {
+      count += _countDescendants(c.id);
+    }
+    return count;
+  }
+
+  String _initials(String name) {
+    final parts = name.trim().split(RegExp(r'\s+'));
+    if (parts.isEmpty) return '?';
+    if (parts.length == 1) return parts[0][0].toUpperCase();
+    return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+  }
+}
+
+// ─── Painters ────────────────────────────────────────────────────────────────
+
+class _VLinePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFFCBD5E1)
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
+    canvas.drawLine(
+      Offset(size.width / 2, 0),
+      Offset(size.width / 2, size.height),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _NodeConnectorPainter extends CustomPainter {
+  final bool isFirst;
+  final bool isLast;
+  final bool isOnly;
+
+  const _NodeConnectorPainter({
+    required this.isFirst,
+    required this.isLast,
+    required this.isOnly,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFFCBD5E1)
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
+
+    final centerX = size.width / 2;
+
+    // Always draw a vertical drop to the child card
+    canvas.drawLine(
+      Offset(centerX, 0),
+      Offset(centerX, 28), // Matches the padding applied in the row
+      paint,
+    );
+
+    // If there's only one child, we don't need a horizontal crossbar at all
+    if (isOnly) return;
+
+    // Draw the horizontal bar piece for this specific child
+    if (isFirst) {
+      // First child: horizontal line from center to right edge
+      canvas.drawLine(Offset(centerX, 0), Offset(size.width, 0), paint);
+    } else if (isLast) {
+      // Last child: horizontal line from left edge to center
+      canvas.drawLine(Offset(0, 0), Offset(centerX, 0), paint);
+    } else {
+      // Middle child: horizontal line entirely across
+      canvas.drawLine(Offset(0, 0), Offset(size.width, 0), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+

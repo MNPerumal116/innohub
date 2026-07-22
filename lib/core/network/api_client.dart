@@ -126,6 +126,7 @@ class ApiClient {
         }
       }
 
+      // Only log the final response we are going to handle
       _logResponse(method, url, response);
       return _handleResponse(response);
     } on ApiException {
@@ -145,8 +146,8 @@ class ApiClient {
 
       final reqBody = {'session_id': sessionId, 'refresh_token': refreshToken};
 
+      // Match LoginRepo.refreshToken(): no session_id or Auth in headers
       final headers = Map<String, String>.from(ApiConstants.jsonHeaders);
-      headers['session_id'] = sessionId;
 
       _logRequest(
         'POST [REFRESH]',
@@ -163,12 +164,13 @@ class ApiClient {
 
       _logResponse('POST [REFRESH]', ApiConstants.refreshToken, response);
 
-      if (response.statusCode == 200) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         await _storage.saveTokens(
-          authToken: data['auth_token'] as String,
-          refreshToken: data['refresh_token'] as String,
-          sessionId: data['session_id'] as String,
+          authToken: (data['auth_token'] ?? '') as String,
+          refreshToken: (data['refresh_token'] ?? '') as String,
+          sessionId: (data['session_id'] ?? sessionId) as String, // fallback if missing
+          rememberMe: true, // preserve session
         );
         return true;
       }
